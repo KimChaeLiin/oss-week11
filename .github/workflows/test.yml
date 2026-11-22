@@ -5,9 +5,9 @@ on:
     branches: [main]
   pull_request:
 
-job:
+jobs:
   test:
-    rums-on: ubuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
