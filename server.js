@@ -18,6 +18,11 @@ import { getDaily } from "./openMeteo.js";
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
+if (!process.env.ADMIN_TOKEN) {
+  console.error("ADMIN_TOKEN is not set. Copy .env.example to .env.");
+  process.exit(1);
+}
+
 app.use(express.static("public"));
 
 const CITIES = {
@@ -26,12 +31,18 @@ const CITIES = {
   gangneung: { name: "Gangneung", lat: 37.7519, lon: 128.8761 },
 };
 
+const counts = {};
+
 app.get("/api/forecast", async (req, res) => {
     const city = Object.hasOwn(CITIES, req.query.city);
 
     if (!city) {
         return res.status(400).json({error: `Unknown city: ${req.query.city}`});
-    }try {
+    }
+    
+    counts[req.query.city] = (counts[req.query.city] ?? 0) + 1;
+
+    try {
         const cityData = CITIES[req.query.city];
         const days = toDays(await getDaily(cityData));
         res.json({ city: cityData.name, days});
@@ -40,9 +51,18 @@ app.get("/api/forecast", async (req, res) => {
     }
 });
 
+app.get("/api/stats", (req, res) => {
+  if (req.get("Authorization") !== `Bearer ${process.env.ADMIN_TOKEN}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  res.status(200).json(counts);
+});
+
 app.get("/api/health", (req, res) => {
     res.status(200).json({status: "ok"});
 });
+
 
 app.listen(PORT, (error) => {
     if (error) {
